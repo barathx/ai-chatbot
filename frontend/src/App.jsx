@@ -1,6 +1,8 @@
 import { useState } from "react";
 import "./App.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 function App() {
   const [message, setMessage] = useState("");
   const [response, setResponse] = useState("");
@@ -13,24 +15,31 @@ function App() {
     setResponse("");
 
     try {
-      const res = await fetch("http://localhost:3000/api/chat", {
+      const res = await fetch(`${API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: message,
+          message: message.trim(),
         }),
       });
 
       const data = await res.json();
 
-      setResponse(data.reply || data.error);
-    } catch (error) {
-      setResponse("Unable to connect to the server.");
-    }
+      if (!res.ok) {
+        throw new Error(data.error || "Something went wrong.");
+      }
 
-    setLoading(false);
+      setResponse(data.reply || "No response received.");
+    } catch (error) {
+      console.error("API Error:", error);
+      setResponse(
+        error.message || "Unable to connect to the server."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
