@@ -6,34 +6,55 @@ const OpenAI = require("openai");
 // Load environment variables
 dotenv.config();
 
+// Create Express app
 const app = express();
-const PORT = 3000;
+
+// Render provides PORT automatically.
+// Locally it will use 3000.
+const PORT = process.env.PORT || 3000;
 
 // -----------------------------
 // Middleware
 // -----------------------------
+
 app.use(cors());
 app.use(express.json());
 
 // -----------------------------
 // Check NVIDIA API key
 // -----------------------------
+
 if (!process.env.NVIDIA_API_KEY) {
-  console.error("❌ NVIDIA_API_KEY is missing in .env");
+  console.error("❌ NVIDIA_API_KEY is missing.");
+  console.error("Please add NVIDIA_API_KEY to your environment variables.");
   process.exit(1);
 }
 
 // -----------------------------
 // NVIDIA NIM Client
 // -----------------------------
+
 const client = new OpenAI({
   apiKey: process.env.NVIDIA_API_KEY,
   baseURL: "https://integrate.api.nvidia.com/v1",
 });
 
 // -----------------------------
+// Root Route
+// -----------------------------
+
+app.get("/", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "AI Text Backend is running",
+    provider: "NVIDIA NIM",
+  });
+});
+
+// -----------------------------
 // Health Check
 // -----------------------------
+
 app.get("/api/health", (req, res) => {
   res.json({
     status: "OK",
@@ -46,6 +67,7 @@ app.get("/api/health", (req, res) => {
 // -----------------------------
 // AI Chat API
 // -----------------------------
+
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -53,6 +75,7 @@ app.post("/api/chat", async (req, res) => {
     // Validate message
     if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({
+        success: false,
         error: "Please enter a message.",
       });
     }
@@ -113,22 +136,38 @@ app.post("/api/chat", async (req, res) => {
 // -----------------------------
 // 404 Handler
 // -----------------------------
+
 app.use((req, res) => {
   res.status(404).json({
+    success: false,
     error: "Route not found",
+  });
+});
+
+// -----------------------------
+// Global Error Handler
+// -----------------------------
+
+app.use((err, req, res, next) => {
+  console.error("❌ Server Error:", err);
+
+  res.status(500).json({
+    success: false,
+    error: "Internal server error.",
   });
 });
 
 // -----------------------------
 // Start Server
 // -----------------------------
-app.listen(PORT, () => {
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log("");
   console.log("=================================");
   console.log("🚀 AI Backend Started");
   console.log("=================================");
-  console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
+  console.log(`📡 Port: ${PORT}`);
+  console.log(`❤️  Health: /api/health`);
   console.log("🤖 Provider: NVIDIA NIM");
   console.log("🧠 Model: Nemotron 3.5 Lightning");
   console.log("=================================");
